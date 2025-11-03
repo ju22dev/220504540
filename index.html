@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>My dApp</title></head>
+<body>
+    <button id="connect">Connect to MetaMask</button>
+    <button id="read">Get Balance</button>
+    <input type="text" id="ethval" value="">
+    <button id="deposit">Deposit(ETH)</button>
+    <button id="withdraw">Withdraw</button>
+    <pre id="out"></pre>
+
+    <!-- Ethers v6 UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+    <script>
+        const CONTRACT_ADDRESS = "0x0cB0241F0F3CC64760133D03e1314E87c3527263";
+        const ABI = [
+            {
+                "inputs": [],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "withdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "inputs": [],
+                "name": "getBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        let provider, signer, contract;
+
+        async function connect() {
+            if (!window.ethereum) return alert("MetaMask is needed.");
+            provider = new ethers.BrowserProvider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = await provider.getSigner();
+            contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+            log("Bağlandı: " + await signer.getAddress());
+        }
+
+        async function read() {
+            const v = await ethers.formatEther(await contract.getBalance());;
+            log("Balance: " + v.toString() + " ETH");
+        }
+
+        async function deposit() {
+            const val = document.getElementById("ethval").value || "0.0011"
+            const value = ethers.parseEther(val);
+            const tx = await contract.deposit({ value });
+            log("Sent: " + tx.hash);
+            await tx.wait();
+            log("Confirmed.");
+        }
+
+        async function withdraw() {
+            try {
+                const v = await contract.withdraw();
+                log("Withdrawal Process Initiated: " + v.hash)
+                await v.wait();
+                log("Completed!")
+            } catch(e) {
+                log(e.reason)
+            }
+            
+        }
+
+        function log(m) { document.getElementById("out").textContent += m + "\n"; }
+
+        document.getElementById("connect").onclick = connect;
+        document.getElementById("read").onclick = read;
+        document.getElementById("deposit").onclick = deposit;
+        document.getElementById("withdraw").onclick = withdraw;
+        
+    </script>
+</body>
+</html>
