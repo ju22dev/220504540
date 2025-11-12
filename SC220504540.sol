@@ -40,7 +40,7 @@ contract SC220504540 {
         return "Deposit confirmed!";
     }
 
-    function withdraw(uint amount) external {
+    function withdraw(uint amountWei) external {
         uint256 idx = accountIndex[msg.sender];
         require(idx < accounts.length && idx != 0, "Account not found");
 
@@ -48,10 +48,9 @@ contract SC220504540 {
         require(block.timestamp > acc.triggerTime, "Too early to withdraw");
         require(acc.balance > 0, "No balance");
 
-        amount = amount * 1 ether;
-        require(amount <= acc.balance, "Insufficient fund");
-        acc.balance -= amount;
-        acc.wallet.transfer(amount);
+        require(amountWei <= acc.balance, "Insufficient fund");
+        acc.balance -= amountWei;
+        acc.wallet.transfer(amountWei);
     }
 
     function ownerClaim(uint idx) external {

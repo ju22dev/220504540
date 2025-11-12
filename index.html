@@ -15,8 +15,13 @@
     <pre id="out" class="bg-gray-800 p-4 rounded-lg w-full max-w-xl mt-6 h-60 overflow-y-auto"></pre>
 
     <script>
-        const CONTRACT_ADDRESS = "0xB104897e64f7686Bb2e85D9e328A5275f9F5787e";
+        const CONTRACT_ADDRESS = "0x355f71D313810A49AB7a3Aa90E5f868Ce521A0c4";
         const ABI = [
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
             {
                 "inputs": [],
                 "name": "deposit",
@@ -28,6 +33,19 @@
                     }
                 ],
                 "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
                 "type": "function"
             },
             {
@@ -47,31 +65,13 @@
                 "inputs": [
                     {
                         "internalType": "uint256",
-                        "name": "amount",
+                        "name": "amountWei",
                         "type": "uint256"
                     }
                 ],
                 "name": "withdraw",
                 "outputs": [],
                 "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "stateMutability": "nonpayable",
-                "type": "constructor"
-            },
-            {
-                "inputs": [],
-                "name": "getBalance",
-                "outputs": [
-                    {
-                        "internalType": "uint256",
-                        "name": "",
-                        "type": "uint256"
-                    }
-                ],
-                "stateMutability": "view",
                 "type": "function"
             }
         ];
@@ -94,7 +94,7 @@
                 log("Connected: " + await signer.getAddress());
 
             } catch (e) {
-                log("Withdraw Failed. " + e.reason);
+                log("Withdraw Failed. " + (e.reason || e.message));
             }
 
         }
@@ -105,7 +105,7 @@
                 log("Balance: " + ethers.formatEther(balance) + " ETH");
 
             } catch (e) {
-                log("Get Balance Failed. " + e.reason);
+                log("Get Balance Failed. " + (e.reason || e.message));
             }
         }
 
@@ -116,24 +116,26 @@
                 log("Deposit Initiated: " + tx.hash);
                 await tx.wait();
                 log("Deposit confirmed.");
-            } catch(e) {
-                log("Deposit Failed. " + e.reason);
+            } catch (e) {
+                log("Deposit Failed. " + (e.reason || e.message));
             }
 
         }
 
         async function withdraw() {
             try {
-                const amount = document.getElementById("withdrawAmount").value;
-                const tx = await contract.withdraw(amount);
+                const ethAmount = document.getElementById("withdrawAmount").value;
+                const amountWei = ethers.parseEther(ethAmount);
+                const tx = await contract.withdraw(amountWei);
                 log("Withdraw Initiated: " + tx.hash);
                 await tx.wait();
                 log("Withdrawal confirmed.");
-
             } catch (e) {
-                log("Withdraw Failed. " + e.reason);
+                log("Withdraw failed: " + (e.reason || e.message));
             }
         }
+
+
 
         async function ownerClaim() {
             try {
@@ -144,7 +146,7 @@
                 log("Owner claim confirmed.");
 
             } catch (e) {
-                log("Claim Failed. " + e.reason);
+                log("Claim Failed. " + (e.reason || e.message));
             }
         }
 
