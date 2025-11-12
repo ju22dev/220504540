@@ -85,35 +85,54 @@
         }
 
         async function connect() {
-            if (!window.ethereum) return alert("MetaMask required");
-            provider = new ethers.BrowserProvider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = await provider.getSigner();
-            contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-            log("Connected: " + await signer.getAddress());
+            try {
+                if (!window.ethereum) return alert("MetaMask required");
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+                log("Connected: " + await signer.getAddress());
+
+            } catch (e) {
+                log("Withdraw Failed. " + e.reason);
+            }
 
         }
 
         async function getBalance() {
-            const balance = await contract.getBalance();
-            log("Balance: " + ethers.formatEther(balance) + " ETH");
+            try {
+                const balance = await contract.getBalance();
+                log("Balance: " + ethers.formatEther(balance) + " ETH");
+
+            } catch (e) {
+                log("Get Balance Failed. " + e.reason);
+            }
         }
 
         async function deposit() {
-            const val = document.getElementById("ethval").value || "0.0001";
-            const tx = await contract.deposit({ value: ethers.parseEther(val) });
-            log("Deposit Initiated: " + tx.hash);
-            await tx.wait();
-            log("Deposit confirmed.");
+            try {
+                const val = document.getElementById("ethval").value || "0.0001";
+                const tx = await contract.deposit({ value: ethers.parseEther(val) });
+                log("Deposit Initiated: " + tx.hash);
+                await tx.wait();
+                log("Deposit confirmed.");
+            } catch(e) {
+                log("Deposit Failed. " + e.reason);
+            }
+
         }
 
         async function withdraw() {
-            const amt = document.getElementById("withdrawAmount").value;
-            const amount = ethers.parseEther(amt);
-            const tx = await contract.withdraw(amount);
-            log("Withdraw Initiated: " + tx.hash);
-            await tx.wait();
-            log("Withdrawal confirmed.");
+            try {
+                const amount = document.getElementById("withdrawAmount").value;
+                const tx = await contract.withdraw(amount);
+                log("Withdraw Initiated: " + tx.hash);
+                await tx.wait();
+                log("Withdrawal confirmed.");
+
+            } catch (e) {
+                log("Withdraw Failed. " + e.reason);
+            }
         }
 
         async function ownerClaim() {
