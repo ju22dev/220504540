@@ -1,28 +1,56 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>My dApp</title></head>
-<body>
-    <button id="connect">Connect to MetaMask</button>
-    <button id="read">Get Balance</button>
-    <input type="text" id="ethval" value="">
-    <button id="deposit">Deposit(ETH)</button>
-    <button id="withdraw">Withdraw</button>
-    <pre id="out"></pre>
+<html lang="en">
 
-    <!-- Ethers v6 UMD -->
+<head>
+    <meta charset="utf-8">
+    <title>Multi User Money Saving dApp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center p-6">
+    <h1 class="text-3xl font-bold mt-5 mb-20">Multi User Money Saving dApp</h1>
+    <div id="app" class="w-full max-w-xl"></div>
+
+    <pre id="out" class="bg-gray-800 p-4 rounded-lg w-full max-w-xl mt-6 h-60 overflow-y-auto"></pre>
+
     <script>
-        const CONTRACT_ADDRESS = "0x0cB0241F0F3CC64760133D03e1314E87c3527263";
+        const CONTRACT_ADDRESS = "0xB104897e64f7686Bb2e85D9e328A5275f9F5787e";
         const ABI = [
             {
                 "inputs": [],
                 "name": "deposit",
-                "outputs": [],
+                "outputs": [
+                    {
+                        "internalType": "string",
+                        "name": "",
+                        "type": "string"
+                    }
+                ],
                 "stateMutability": "payable",
                 "type": "function"
             },
             {
-                "inputs": [],
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "idx",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "ownerClaim",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
                 "name": "withdraw",
                 "outputs": [],
                 "stateMutability": "nonpayable",
@@ -50,48 +78,108 @@
 
         let provider, signer, contract;
 
+        function log(msg) {
+            const out = document.getElementById("out");
+            out.textContent += msg + "\n";
+            out.scrollTop = out.scrollHeight;
+        }
+
         async function connect() {
-            if (!window.ethereum) return alert("MetaMask is needed.");
+            if (!window.ethereum) return alert("MetaMask required");
             provider = new ethers.BrowserProvider(window.ethereum);
             await provider.send("eth_requestAccounts", []);
             signer = await provider.getSigner();
             contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-            log("Bağlandı: " + await signer.getAddress());
+            log("Connected: " + await signer.getAddress());
+
         }
 
-        async function read() {
-            const v = await ethers.formatEther(await contract.getBalance());;
-            log("Balance: " + v.toString() + " ETH");
+        async function getBalance() {
+            const balance = await contract.getBalance();
+            log("Balance: " + ethers.formatEther(balance) + " ETH");
         }
 
         async function deposit() {
-            const val = document.getElementById("ethval").value || "0.0011"
-            const value = ethers.parseEther(val);
-            const tx = await contract.deposit({ value });
-            log("Sent: " + tx.hash);
+            const val = document.getElementById("ethval").value || "0.0001";
+            const tx = await contract.deposit({ value: ethers.parseEther(val) });
+            log("Deposit Initiated: " + tx.hash);
             await tx.wait();
-            log("Confirmed.");
+            log("Deposit confirmed.");
         }
 
         async function withdraw() {
-            try {
-                const v = await contract.withdraw();
-                log("Withdrawal Process Initiated: " + v.hash)
-                await v.wait();
-                log("Completed!")
-            } catch(e) {
-                log(e.reason)
-            }
-            
+            const amt = document.getElementById("withdrawAmount").value;
+            const amount = ethers.parseEther(amt);
+            const tx = await contract.withdraw(amount);
+            log("Withdraw Initiated: " + tx.hash);
+            await tx.wait();
+            log("Withdrawal confirmed.");
         }
 
-        function log(m) { document.getElementById("out").textContent += m + "\n"; }
+        async function ownerClaim() {
+            try {
+                const idx = document.getElementById("claimIndex").value;
+                const tx = await contract.ownerClaim(idx);
+                log("Owner claim Initiated: " + tx.hash);
+                await tx.wait();
+                log("Owner claim confirmed.");
 
-        document.getElementById("connect").onclick = connect;
-        document.getElementById("read").onclick = read;
-        document.getElementById("deposit").onclick = deposit;
-        document.getElementById("withdraw").onclick = withdraw;
-        
+            } catch (e) {
+                log("Claim Failed. " + e.reason);
+            }
+        }
+
+        function renderHome() {
+            app.innerHTML = `
+        <div class="flex flex-col space-y-4">
+          <button id="connect" class="px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400" onclick="connect()">Connect MetaMask</button>
+          <div class="flex flex-col space-y-3">
+            <button class="px-4 py-2 bg-white text-gray-800 rounded-lg shadow hover:bg-gray-100" onclick="getBalance()">Get Balance</button>
+            <button class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700" onclick="renderDeposit()">Deposit</button>
+            <button class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700" onclick="renderWithdraw()">Withdraw</button>
+            <button class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700" onclick="renderOwnerClaim()">Owner Claim</button>
+          </div>
+        </div>
+      `;
+        }
+
+        function renderDeposit() {
+            app.innerHTML = `
+        <div class="space-y-4">
+          <input id="ethval" type="text" placeholder="Amount in ETH" class="w-full p-2 rounded bg-gray-800 border border-gray-700">
+          <div class="flex justify-between">
+            <button class="px-4 w-3/4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700" onclick="deposit()">Deposit</button>
+            <button class="px-4 width-1/4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600" onclick="getBalance()">Get Balance</button>
+          </div>
+          <button class="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 w-full" onclick="renderHome()">Back Home</button>
+        </div>
+      `;
+        }
+
+        function renderWithdraw() {
+            app.innerHTML = `
+        <div class="space-y-4">
+          <input id="withdrawAmount" type="text" placeholder="Amount in ETH" class="w-full p-2 rounded bg-gray-800 border border-gray-700">
+          <button class="px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 w-full" onclick="withdraw()">Withdraw</button>
+          <button class="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 w-full" onclick="renderHome()">Back Home</button>
+        </div>
+      `;
+        }
+
+        function renderOwnerClaim() {
+            app.innerHTML = `
+        <div class="space-y-4">
+          <input id="claimIndex" type="number" placeholder="Account index" class="w-full p-2 rounded bg-gray-800 border border-gray-700">
+          <button class="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 w-full" onclick="ownerClaim()">Owner Claim</button>
+          <button class="px-4 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 w-full" onclick="renderHome()">Back Home</button>
+        </div>
+      `;
+        }
+
+        // initialize
+        const app = document.getElementById("app");
+        renderHome();
     </script>
 </body>
+
 </html>
